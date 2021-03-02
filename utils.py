@@ -1,3 +1,4 @@
+import time
 import keras
 import os, h5py
 import pandas as pd
@@ -22,20 +23,20 @@ class CustomSaver(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         if epoch in self.epochs:  # or save after some epoch, each k-th epoch etc.
-            print("Saving", self.model.name, 'epoch', epoch, os.path.join(self.out_dir,
-                                                                          self.model.name + '-{}-{:1.2f}.hdf5'.format(epoch,
-                                                                                                                      logs['val_loss'])))
+            # print("Saving", self.model.name, 'epoch', epoch, os.path.join(self.out_dir,
+            #                                                               self.model.name + '-{}-{:1.2f}.hdf5'.format(epoch,
+            #                                                                                                           logs['val_loss'])))
             self.model.save(os.path.join(self.out_dir,
                                          self.model.name + '-{}-{:1.2f}.hdf5'.format(epoch, logs['val_loss'])))
 
 
-def train_model_iteratively(baseline_model, X_train, Y_train, X_test, Y_test, outdir, epochs=12, epochs_to_save=None, batch_size=128,
-                            num_models=3):
+def train_model_iteratively(baseline_model, X_train, Y_train, X_test, Y_test,
+                            outdir, epochs=12, epochs_to_save=None, batch_size=128, num_models=3):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     Y_preds = []
-    print("Train:", X_train.shape, Y_train.shape)
-    print("Test:", X_test.shape, Y_test.shape)
+    print("X_train: {}, Y_train: {}".format(X_train.shape, Y_train.shape))
+    print("X_test: {}, Y_test: {}".format(X_test.shape, Y_test.shape))
     pred_col_names = ['p' + str(i) for i in range(Y_train.shape[1])]
     for i in range(num_models):
         name = 'model.' + str(i)
@@ -49,7 +50,7 @@ def train_model_iteratively(baseline_model, X_train, Y_train, X_test, Y_test, ou
         Y_pred['class'] = Y_pred.idxmax(axis=1)
         Y_pred['model'] = name
         Y_preds.append(Y_pred)
-    print('appending dataframe')
+    # print('appending dataframe')
     Y_predsDF = pd.concat(Y_preds)
     Y_predsDF.to_csv(os.path.join(outdir, 'predictions.csv'))
 
@@ -77,7 +78,7 @@ def get_model_weights(path_to_model_files='/Users/meslami/Documents/GitRepos/dee
     model_weights = {}
     for fname in os.listdir(path_to_model_files):
         if 'hdf5' in fname:
-            print(fname)
+            # print(fname)
             f = h5py.File(os.path.join(path_to_model_files, fname), 'r')
             model_weights[fname] = {}
             #         model_weights[fname]['model_id']=fname[:-5]
@@ -176,9 +177,9 @@ class gp_tensorflow:
                                options=dict(maxiter=100))
 
     def get_model(self):
-        if gp.__model is None:
+        if gp_tensorflow.__model is None:
             raise ValueError('Model does not exist. Instantiate first.')
-        return gp.__model
+        return gp_tensorflow.__model
 
 
 class gp:
@@ -250,7 +251,7 @@ def _BoxMap(f, rect, mode='corners', padding=False, num_pts=10):
 
 def compute_morse_graph(data, phase_subdiv=5):
     '''
-    Method to compute the Morse Graph
+    Method to compute the Morse Graph using an sklearn GP (see class gp)
     :param data: dataframe of parameters that you want to compute Morse Graph on.
     :param phase_subdiv:
     :return:
@@ -278,4 +279,40 @@ def compute_morse_graph(data, phase_subdiv=5):
 
     model = CMGDB.Model(phase_subdiv, lower_bounds, upper_bounds, _F)
     morse_graph, map_graph = CMGDB.ComputeMorseGraph(model)
+    return morse_graph, map_graph
+
+
+def compute_morse_graph_with_gpflow_gp(data, phase_subdiv=5):
+    '''
+    Method to compute the Morse Graph using a gpflow GP (see class gp_tensorflow)
+    :param data: dataframe of parameters that you want to compute Morse Graph on.
+    :param phase_subdiv:
+    :return:
+    '''
+    start = time.time()
+
+    def _f(X):
+        Y, var = gp_instance.get_model().predict_f(np.array([X]))
+        return np.array(Y)[0]
+
+    # Define box map for f
+    def _F(rect):
+        return _BoxMap(_f, rect, padding=True)
+
+    cols = [x for x in data.columns if 'kernel' in x]
+    # Define the parameters for CMGDB
+    lower_bounds = [data[x].min() - 0.5 for x in data.columns if 'kernel' in x]
+    upper_bounds = [data[x].max() + 0.5 for x in data.columns if 'kernel' in x]
+
+    ##INSTANTIATE!!!! gp here!
+    X1 = data[data['epoch'] == data['epoch'].min()][cols]
+    Y1 = data[data['epoch'] == data['epoch'].max()][cols]
+    gp_instance = gp_tensorflow(X1, Y1)
+    # print(type(X1.to_numpy()))
+    # print(gp_instance.get_model().predict_f(X1.to_numpy())[0])  # Need to change to predict_f for tensorflow
+    morse_fname = 'morse_sets.csv'
+
+    model = CMGDB.Model(phase_subdiv, lower_bounds, upper_bounds, _F)
+    morse_graph, map_graph = CMGDB.ComputeMorseGraph(model)
+    print("Duration of compute_morse_graph_with_gpflow_gp: {} minutes".format((time.time() - start)/60))
     return morse_graph, map_graph
