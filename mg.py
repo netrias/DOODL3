@@ -5,6 +5,7 @@ import gpflow
 import itertools
 import time
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class gp_tensorflow:
@@ -165,3 +166,22 @@ def compute_morse_graph_with_gpflow_gp(data, phase_subdiv=5):
 
 def compute_mse(Y_pred,Y_actuals):
     return ((Y_pred - Y_actuals) ** 2).mean()
+
+def plot_actuals_vs_predicted(X1,Y_pred,Y1,num_components=2):
+    '''
+    Plot actuals vs predicted
+    :param X1: Training dataframe
+    :param Y_pred: Predicted data in numpy format.
+    Usually: gp_instance.get_model().predict(X1.to_numpy()) OR gpt.get_model().predict_f(X1.to_numpy())[0].numpy()
+    :param Y1: Actual dataframe
+    :param num_components: number of components
+    :return:
+    '''
+    for i in range(num_components):
+        plt.plot(X1.to_numpy()[:, i], Y_pred[:, i], 'yo',
+                 label='Predicted-Dim0')
+        plt.plot(X1.to_numpy()[:, i], Y1.to_numpy()[:, i], 'b.', label='Actual-Dim1)');
+
+    plt.legend(loc="upper left");
+
+
