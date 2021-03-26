@@ -1,12 +1,17 @@
 import time
 import keras
 import os, h5py
-import pandas as pd
+import subprocess
 import numpy as np
+import pandas as pd
+from IPython.display import Image
 from sklearn.decomposition import PCA
 import gpflow
 import itertools
 import CMGDB
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+from matplotlib.collections import PatchCollection
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel, Matern
 
@@ -314,5 +319,107 @@ def compute_morse_graph_with_gpflow_gp(data, phase_subdiv=5):
 
     model = CMGDB.Model(phase_subdiv, lower_bounds, upper_bounds, _F)
     morse_graph, map_graph = CMGDB.ComputeMorseGraph(model)
-    print("Duration of compute_morse_graph_with_gpflow_gp: {} minutes".format((time.time() - start)/60))
+    print("Duration of compute_morse_graph_with_gpflow_gp: {} minutes".format((time.time() - start) / 60))
     return morse_graph, map_graph
+
+
+def compute_order_retraction(morse_graph, map_graph, title):
+    # Save MVMap to file for CMGDB_Retract
+    with open('CMGDB_mvmap.txt', 'w') as outfile:
+        outfile.write('%d\n' % map_graph.num_vertices())
+        for k in range(0, map_graph.num_vertices()):
+            l = len(map_graph.adjacencies(k))
+            outfile.write('%d ' % k)
+            outfile.write('%d ' % l)
+            for item in map_graph.adjacencies(k):
+                outfile.write('%d ' % item)
+            outfile.write('\n')
+
+    subprocess.call(['./CMGDB_RETRACT'])
+
+    # Load retraction from file
+    with open('CMGDB_retract.txt', 'r') as infile:
+        retract_indices = []
+        retract_tiles = []
+        for i in range(0, map_graph.num_vertices()):
+            index, tile = [int(x) for x in next(infile).split()]
+            retract_indices.append(index)
+            retract_tiles.append(tile)
+
+    # # Display Hasse diagram using Graphviz to compare to Morse graph
+    # # The index labels of the Morse sets may have changed!!
+    # subprocess.call("dot -Tpng Hasse.dot -o Hasse.png")
+    # Image("Hasse.png")
+
+    # Plot order retraction: you may need to change the colors to match CMGDB output
+    bx = morse_graph.phase_space_box(0)
+    bx_width = bx[2] - bx[0]
+    bx_height = bx[3] - bx[1]
+    # print(bx_width);
+    # print(bx_height);
+    fig, ax = plt.subplots(figsize=(7 ,7))
+    # ax.set(xlim=(lower_bounds[0],upper_bounds[0]),ylim=(lower_bounds[1],upper_bounds[1]));
+    ax.set(xlim=[-2, 2], ylim=[-2, 2])
+    boxes_array = []
+    for j in range(0, morse_graph.num_vertices()):
+        boxes_array.append([])
+    for i in range(0, map_graph.num_vertices()):
+        for j in range(0, morse_graph.num_vertices()):
+            if retract_tiles[i] == j:
+                bx = morse_graph.phase_space_box(retract_indices[i])
+                rect = Rectangle(((bx[2] + bx[0]) / 2, (bx[3] + bx[1]) / 2), bx_width, bx_height);
+                boxes_array[j].append(rect)
+    for j in range(0, morse_graph.num_vertices()):
+        # print(len(boxes_array[j]))
+        if j == 0:
+            # color='b'
+            color = 'c'  # I changed the color because the alpha wan't working for some strange reason
+        if j == 1:
+            color = 'm'
+        if j == 2:
+            color = 'k'
+        if j == 3:
+            color = 'g'
+        if j == 4:
+            color = 'k'
+        if j == 5:
+            color = 'k'
+        if j == 6:
+            color = 'k'
+        if j == 7:
+            color = 'k'
+        if j == 8:
+            color = 'k'
+        pc = PatchCollection(boxes_array[j], facecolor=color, alpha=0.3, edgecolor='none')
+        ax.add_collection(pc)
+
+    for j in range(0, morse_graph.num_vertices()):
+        # print(len(morse_graph.morse_set(j)))
+        boxes = []
+        for index in morse_graph.morse_set(j):
+            bx = morse_graph.phase_space_box(index)
+            rect = Rectangle(((bx[2] + bx[0]) / 2, (bx[3] + bx[1]) / 2), bx_width, bx_height);
+            boxes.append(rect)
+        if j == 0:
+            color = 'b'
+        if j == 1:
+            color = 'r'
+        if j == 2:
+            color = 'g'
+        if j == 3:
+            color = 'g'
+        if j == 4:
+            color = 'k'
+        if j == 5:
+            color = 'k'
+        if j == 6:
+            color = 'k'
+        if j == 7:
+            color = 'k'
+        if j == 8:
+            color = 'k'
+        pc2 = PatchCollection(boxes, facecolor=color, alpha=1.0, edgecolor='none')
+        ax.add_collection(pc2)
+
+    plt.title(title)
+    plt.show()
