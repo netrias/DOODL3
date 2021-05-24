@@ -1,9 +1,6 @@
 import keras
 import os, h5py
 
-
-
-
 import subprocess
 import numpy as np
 import pandas as pd
@@ -12,6 +9,7 @@ from sklearn.decomposition import PCA
 import gpflow
 import itertools
 import CMGDB
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
@@ -167,7 +165,6 @@ def get_weights_with_max_change(df_tot, pattern='kernel'):
     df_diff['col_with_max_neg_change'] = df_diff[cols].idxmin(axis=1)
 
     return df_tot, df_diff
-
 
 
 class gp_tensorflow:
@@ -361,7 +358,7 @@ def compute_order_retraction(morse_graph, map_graph, title):
     bx_height = bx[3] - bx[1]
     # print(bx_width);
     # print(bx_height);
-    fig, ax = plt.subplots(figsize=(7 ,7))
+    fig, ax = plt.subplots(figsize=(7, 7))
     # ax.set(xlim=(lower_bounds[0],upper_bounds[0]),ylim=(lower_bounds[1],upper_bounds[1]));
     ax.set(xlim=[-2, 2], ylim=[-2, 2])
     boxes_array = []
@@ -426,4 +423,79 @@ def compute_order_retraction(morse_graph, map_graph, title):
         ax.add_collection(pc2)
 
     plt.title(title)
+    plt.show()
+
+
+def PlotOrderRetraction(morse_graph, map_graph, retract_tiles, retract_indices,
+                        morse_nodes_map=None, morse_nodes=None, proj_dims=None,
+                        fig_w=8, fig_h=8, xlim=None, ylim=None, cmap=matplotlib.cm.brg):
+    num_morse_sets = morse_graph.num_vertices()
+    num_verts = map_graph.num_vertices()
+    if morse_nodes_map == None:
+        morse_nodes_map = {}
+    if morse_nodes == None:
+        morse_nodes = range(num_morse_sets)
+    if proj_dims == None:
+        d1 = 0
+        d2 = 1
+    else:
+        d1 = proj_dims[0]
+        d2 = proj_dims[1]
+    rect = morse_graph.phase_space_box(0)
+    dim = int(len(rect) / 2)
+    rect_width = rect[dim + d1] - rect[d1]
+    rect_height = rect[dim + d2] - rect[d2]
+    # Get min and max x and y values
+    grid_boxes = [morse_graph.phase_space_box(i) for i in range(num_verts)]
+    if xlim == None:
+        x_min = min([rect[d1] for rect in grid_boxes])
+        x_max = max([rect[dim + d1] for rect in grid_boxes])
+        if x_max - x_min < 0.1:
+            x_min -= 0.05
+            x_max += 0.05
+    else:
+        x_min = xlim[0]
+        x_max = xlim[1]
+    if ylim == None:
+        y_min = min([rect[d2] for rect in grid_boxes])
+        y_max = max([rect[dim + d2] for rect in grid_boxes])
+        if y_max - y_min < 0.1:
+            y_min -= 0.05
+            y_max += 0.05
+    else:
+        y_min = ylim[0]
+        y_max = ylim[1]
+    x_axis_width = x_max - x_min
+    y_axis_height = y_max - y_min
+    # Next plot order retraction and Morse sets
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+    # Set axis limits
+    ax.set_xlim([x_min, x_max])
+    ax.set_ylim([y_min, y_max])
+    # Normalization for color map
+    cmap_norm = matplotlib.colors.Normalize(vmin=0, vmax=num_morse_sets - 1)
+    # Plot order retract boxes
+    for m_node in morse_nodes:
+        # m_node is the index in the original Morse graph
+        clr = matplotlib.colors.to_hex(cmap(cmap_norm(m_node)))
+        # Get the index of the Morse set in the order retraction Morse graph
+        morse_node = morse_nodes_map[m_node] if m_node in morse_nodes_map else m_node
+        tiles_inds = [i for i in range(num_verts) if retract_tiles[i] == morse_node]
+        morse_retract = [morse_graph.phase_space_box(retract_indices[i]) for i in tiles_inds]
+        rectangles_list = []
+        for rect in morse_retract:
+            rectangle = Rectangle((rect[d1], rect[d2]), rect_width, rect_height)
+            rectangles_list.append(rectangle)
+        pc = PatchCollection(rectangles_list, cmap=cmap, fc=clr, alpha=0.3, ec='none')
+        ax.add_collection(pc)
+    # Plot Morse set boxes
+    for morse_node in morse_nodes:
+        clr = matplotlib.colors.to_hex(cmap(cmap_norm(morse_node)))
+        rectangles_list = []
+        for index in morse_graph.morse_set(morse_node):
+            rect = morse_graph.phase_space_box(index)
+            rectangle = Rectangle((rect[d1], rect[d2]), rect_width, rect_height)
+            rectangles_list.append(rectangle)
+        pc2 = PatchCollection(rectangles_list, cmap=cmap, fc=clr, alpha=1.0, ec='none')
+        ax.add_collection(pc2)
     plt.show()
