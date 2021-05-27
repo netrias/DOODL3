@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from IPython.display import Image
 from sklearn.decomposition import PCA
-import gpflow
+# import gpflow
 import itertools
 import CMGDB
 import matplotlib
