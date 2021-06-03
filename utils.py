@@ -10,6 +10,7 @@ from sklearn.decomposition import PCA
 import itertools
 import CMGDB
 import matplotlib
+import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
@@ -428,7 +429,8 @@ def compute_order_retraction(morse_graph, map_graph, title):
 
 def PlotOrderRetraction(morse_graph, map_graph, retract_tiles, retract_indices,
                         morse_nodes_map=None, morse_nodes=None, proj_dims=None,
-                        fig_w=8, fig_h=8, xlim=None, ylim=None, cmap=matplotlib.cm.brg):
+                        fig_w=8, fig_h=8, xlim=None, ylim=None, cmap=matplotlib.cm.brg,
+                        df_of_interest=None, x=None, y=None, hue=None):
     num_morse_sets = morse_graph.num_vertices()
     num_verts = map_graph.num_vertices()
     if morse_nodes_map == None:
@@ -472,6 +474,8 @@ def PlotOrderRetraction(morse_graph, map_graph, retract_tiles, retract_indices,
     # Set axis limits
     ax.set_xlim([x_min, x_max])
     ax.set_ylim([y_min, y_max])
+    # print("x:", x_min, ",", x_max)
+    # print("y:", y_min, ",", y_max)
     # Normalization for color map
     cmap_norm = matplotlib.colors.Normalize(vmin=0, vmax=num_morse_sets - 1)
     # Plot order retract boxes
@@ -498,4 +502,17 @@ def PlotOrderRetraction(morse_graph, map_graph, retract_tiles, retract_indices,
             rectangles_list.append(rectangle)
         pc2 = PatchCollection(rectangles_list, cmap=cmap, fc=clr, alpha=1.0, ec='none')
         ax.add_collection(pc2)
+
+    hex_vals = sns.color_palette("tab10").as_hex()
+
+    if hue == "epoch":
+        hue_order = ["1", max(df_of_interest[hue].unique())]
+    else:
+        hue_order = None
+
+    sns.scatterplot(data=df_of_interest, x=x, y=y,
+                    hue=hue, hue_order=hue_order,
+                    palette=sns.color_palette([hex_vals[1], hex_vals[3]]),
+                    edgecolor=None,
+                    ax=ax)
     plt.show()
