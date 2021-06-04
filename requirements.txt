@@ -93,4 +93,4 @@ seaborn == 0.11.1
 # deep_chaos/data_loaders.py: 6
 # deep_chaos/model-runs.ipynb: 21
 # deep_chaos/models.py: 3,4
-tensorflow == 2.4.0
+tensorflow == 2.5.0
