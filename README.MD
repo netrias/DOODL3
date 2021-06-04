@@ -16,7 +16,7 @@ pip3 install -r requirements.txt
 
 ## Training and testing
 
-Model training was carried out in `model-runs.ipynb`. Inside this notebook, MNIST and Iris train/test splits were loaded using functions from `data_loaders.py`. The notebook outputs model weights and predictions to subdirectories under a "data" directory. Note that the model weights and predictions that we used to generate our figures are included as a zip file, so there is no need to rerun `model_runs.ipynb` unless you want to conduct the training and testing again.
+Model training was carried out in `model-runs.ipynb`. Inside this notebook, MNIST and Iris train/test splits were loaded using functions from `data_loaders.py`, and models were loaded from `models.py`. The notebook outputs model weights and predictions to subdirectories under a "data" directory. Note that the model weights and predictions that we used to generate our figures are included as a zip file, so there is no need to rerun `model_runs.ipynb` unless you want to conduct the training and testing again.
 
 ## Creating plots for test predictions and weights
 
