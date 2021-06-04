@@ -6,7 +6,7 @@ This repository is the official implementation of [Extracting Global Dynamics of
 ## Setup, Requirements, and Installation
 Clone this repository into the environment of your choice (directory, conda env, virtualenv, etc). Conda envs are recommended.
 
-Then follow the instructions [here](https://github.com/marciogameiro/CMGDB) to install version 0.1.0 of CMGDB.
+Then follow the instructions [here](https://github.com/marciogameiro/CMGDB) to install version 1.0.0 of CMGDB.
 
 Then to install remaining requirements:
 
